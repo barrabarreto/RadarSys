@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RADAR MANAGER — Central de Controle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0c0f;
+    --bg2:       #0f1217;
+    --bg3:       #141820;
+    --panel:     #161b24;
+    --border:    #1e2738;
+    --border2:   #252f40;
+    --accent:    #00e5ff;
+    --accent2:   #0099bb;
+    --red:       #ff3b55;
+    --red-dim:   #3d0a10;
+    --green:     #00e676;
+    --green-dim: #003320;
+    --yellow:    #ffd600;
+    --yellow-dim:#2a2000;
+    --text:      #c8d6e5;
+    --text-dim:  #5a6a7e;
+    --text-muted:#3a4a5e;
+    --mono:      'Share Tech Mono', monospace;
+    --sans:      'Barlow', sans-serif;
+    --cond:      'Barlow Condensed', sans-serif;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    height: 100%;
+    overflow-x: hidden;
+  }
+
+  /* ─── SCANLINES OVERLAY ─── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 56px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 32px; height: 32px; }
+  .logo-text {
+    font-family: var(--cond);
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .logo-sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-top: 1px;
+  }
+
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    background: var(--bg3);
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+  .status-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.offline { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .status-dot.blink {
+    animation: blink 1s infinite;
+  }
+  @keyframes blink {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  #clock {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+
+  /* ─── NAV TABS ─── */
+  nav {
+    display: flex;
+    gap: 0;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+  }
+  .tab {
+    font-family: var(--cond);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 12px 20px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all .15s;
+    border: none;
+    background: none;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+  }
+
+  /* ─── LAYOUT ─── */
+  .page { display: none; padding: 24px; }
+  .page.active { display: block; }
+
+  /* ─── GRID ─── */
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 20px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 20px; }
+
+  /* ─── PANEL ─── */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 16px;
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-title {
+    font-family: var(--cond);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  /* ─── METRIC CARDS ─── */
+  .metric-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--accent);
+  }
+  .metric-card.alert::before { background: var(--red); }
+  .metric-card.warn::before  { background: var(--yellow); }
+  .metric-card.ok::before    { background: var(--green); }
+
+  .metric-label {
+    font-family: var(--cond);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .metric-value {
+    font-family: var(--mono);
+    font-size: 32px;
+    color: var(--text);
+    line-height: 1;
+  }
+  .metric-value .unit {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-left: 4px;
+  }
+  .metric-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 6px;
+  }
+
+  /* ─── BOTÕES ─── */
+  .btn {
+    font-family: var(--cond);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border: 1px solid;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+  }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn-outline {
+    background: transparent;
+    border-color: var(--border2);
+    color: var(--text-dim);
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger {
+    background: transparent;
+    border-color: var(--red);
+    color: var(--red);
+  }
+  .btn-danger:hover { background: var(--red); color: var(--bg); }
+  .btn-success {
+    background: var(--green);
+    border-color: var(--green);
+    color: var(--bg);
+  }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ─── INPUTS ─── */
+  .form-group { margin-bottom: 14px; }
+  .form-label {
+    display: block;
+    font-family: var(--cond);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 5px;
+  }
+  .form-input, .form-select {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .form-input:focus, .form-select:focus {
+    border-color: var(--accent);
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* ─── RADAR LIST ─── */
+  .radar-list { display: flex; flex-direction: column; gap: 8px; }
+  .radar-item {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: border-color .15s;
+  }
+  .radar-item:hover { border-color: var(--border2); }
+  .radar-item.offline { opacity: .6; }
+
+  .radar-status-icon {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .radar-status-icon.online  { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .radar-status-icon.offline { background: var(--red); }
+
+  .radar-info { flex: 1; min-width: 0; }
+  .radar-name {
+    font-family: var(--cond);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .radar-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .radar-speed {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .radar-speed-val {
+    font-family: var(--mono);
+    font-size: 22px;
+    color: var(--text);
+  }
+  .radar-speed-val.fast { color: var(--red); }
+  .radar-speed-lbl {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .radar-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  /* ─── EVENTOS ─── */
+  .event-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .event-feed::-webkit-scrollbar { width: 4px; }
+  .event-feed::-webkit-scrollbar-track { background: var(--bg); }
+  .event-feed::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  .event-item {
+    display: grid;
+    grid-template-columns: 90px 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 10px;
+    background: var(--bg3);
+    border-left: 2px solid var(--border);
+    font-family: var(--mono);
+    font-size: 12px;
+    animation: slideIn .3s ease;
+  }
+  .event-item.infraction { border-left-color: var(--red); background: color-mix(in srgb, var(--red-dim) 80%, transparent); }
+  .event-item.ok         { border-left-color: var(--green); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .event-time { color: var(--text-dim); font-size: 11px; }
+  .event-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .event-speed { font-size: 16px; font-weight: bold; }
+  .event-speed.fast { color: var(--red); }
+  .event-speed.ok   { color: var(--green); }
+  .event-badge {
+    font-family: var(--cond);
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-weight: 700;
+  }
+  .badge-infraction { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+  .badge-ok { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+
+  /* ─── VELOCÍMETRO ─── */
+  .speedometer-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+  .speed-display {
+    font-family: var(--mono);
+    font-size: 72px;
+    color: var(--accent);
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(0,229,255,.3);
+    transition: color .3s;
+  }
+  .speed-display.fast { color: var(--red); text-shadow: 0 0 30px rgba(255,59,85,.4); }
+  .speed-unit {
+    font-family: var(--cond);
+    font-size: 16px;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    margin-top: -4px;
+  }
+  .speed-limit-line {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+
+  /* ─── PROGRESS BAR ─── */
+  .speed-bar-wrap { margin: 8px 0; }
+  .speed-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+  .speed-bar-fill {
+    height: 100%;
+    background: var(--green);
+    transition: width .4s ease, background .3s;
+    border-radius: 2px;
+  }
+  .speed-bar-limit {
+    position: absolute;
+    top: -4px; bottom: -4px;
+    width: 2px;
+    background: var(--yellow);
+  }
+
+  /* ─── TOAST ─── */
+  #toast-container {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 9999;
+  }
+  .toast {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 10px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    animation: toastIn .2s ease;
+    max-width: 320px;
+  }
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error   { border-left: 3px solid var(--red); }
+  .toast.info    { border-left: 3px solid var(--accent); }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ─── SCAN PROGRESS ─── */
+  .scan-progress {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    margin-bottom: 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+  }
+  .scan-progress.active { display: flex; }
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── PING INDICATOR ─── */
+  .ping-flash {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pingFlash .5s ease;
+  }
+  @keyframes pingFlash {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(3); opacity: 0; }
+  }
+
+  /* ─── SCROLLBAR GLOBAL ─── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 1200px) {
+    .grid-4 { grid-template-columns: repeat(2,1fr); }
+    .grid-2-1 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 768px) {
+    .grid-3, .grid-2 { grid-template-columns: 1fr; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+
+  /* ─── EXTRA DETAILS ─── */
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    font-family: var(--cond);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 8px 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+  }
+  tr:hover td { background: var(--bg3); }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--cond);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 2px;
+    border: 1px solid;
+  }
+  .tag-green { color: var(--green); border-color: var(--green); background: var(--green-dim); }
+  .tag-red   { color: var(--red); border-color: var(--red); background: var(--red-dim); }
+  .tag-yellow{ color: var(--yellow); border-color: var(--yellow); background: var(--yellow-dim); }
+  .tag-blue  { color: var(--accent); border-color: var(--accent2); background: rgba(0,229,255,.05); }
+
+  .section-title {
+    font-family: var(--cond);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .empty-state-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+    opacity: .4;
+  }
+
+  /* ─── MODAL ─── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.7);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 24px;
+    width: 500px;
+    max-width: 95vw;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .modal-title {
+    font-family: var(--cond);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14" stroke="#00e5ff" stroke-width="1.5" opacity=".3"/>
+        <circle cx="16" cy="16" r="9"  stroke="#00e5ff" stroke-width="1.5" opacity=".5"/>
+        <circle cx="16" cy="16" r="4"  fill="#00e5ff"/>
+        <line x1="16" y1="2"  x2="16" y2="7"  stroke="#00e5ff" stroke-width="1.5"/>
+        <line x1="16" y1="25" x2="16" y2="30" stroke="#00e5ff" stroke-width="1.5"/>
+        <line x1="2"  y1="16" x2="7"  y2="16" stroke="#00e5ff" stroke-width="1.5"/>
+        <line x1="25" y1="16" x2="30" y2="16" stroke="#00e5ff" stroke-width="1.5"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-text">RADAR MANAGER</div>
+      <div class="logo-sub">SISTEMA DE CONTROLE CENTRAL</div>
+    </div>
+  </div>
+  <div class="header-status">
+    <div class="status-pill">
+      <div class="status-dot blink online" id="pg-dot"></div>
+      <span id="pg-status-text">POSTGRESQL</span>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot online blink" style="background:var(--accent)"></div>
+      <span id="radares-online-count">0 RADARES</span>
+    </div>
+    <div id="clock">00:00:00</div>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav>
+  <button class="tab active" onclick="showPage('dashboard')">Dashboard</button>
+  <button class="tab" onclick="showPage('radares')">Radares</button>
+  <button class="tab" onclick="showPage('eventos')">Eventos</button>
+  <button class="tab" onclick="showPage('configuracoes')">Configurações</button>
+</nav>
+
+<!-- ──────────────────────────────────────────── -->
+<!--  PAGE: DASHBOARD                            -->
+<!-- ──────────────────────────────────────────── -->
+<div id="page-dashboard" class="page active">
+
+  <!-- MÉTRICAS DO DIA -->
+  <div class="grid-4" id="metrics-pg">
+    <div class="metric-card">
+      <div class="metric-label">Detecções hoje</div>
+      <div class="metric-value" id="m-total">—</div>
+      <div class="metric-sub">últimas 24 horas</div>
+    </div>
+    <div class="metric-card alert">
+      <div class="metric-label">Infrações</div>
+      <div class="metric-value" id="m-infracoes">—</div>
+      <div class="metric-sub">acima do limite</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Velocidade média</div>
+      <div class="metric-value" id="m-media">—<span class="unit">km/h</span></div>
+      <div class="metric-sub">últimas 24 horas</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Vel. máxima</div>
+      <div class="metric-value" id="m-maxima">—<span class="unit">km/h</span></div>
+      <div class="metric-sub">hoje</div>
+    </div>
+  </div>
+
+  <div class="grid-2-1">
+    <!-- EVENTO AO VIVO -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Feed em Tempo Real</span>
+        <span class="tag tag-blue">
+          <span class="status-dot blink" style="display:inline-block;width:6px;height:6px;background:var(--accent);border-radius:50%;margin-right:4px"></span>
+          AO VIVO
+        </span>
+      </div>
+      <div class="event-feed" id="event-feed">
+        <div class="empty-state">
+          <div class="empty-state-icon">📡</div>
+          Aguardando detecções...
+        </div>
+      </div>
+    </div>
+
+    <!-- RADAR MAIS ATIVO + VELOCÍMETRO -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Última Velocidade</span>
+        </div>
+        <div class="speedometer-wrap">
+          <div class="speed-display" id="speed-display">0</div>
+          <div class="speed-unit">KM/H</div>
+          <div class="speed-bar-wrap" style="width:100%;margin-top:12px">
+            <div class="speed-bar">
+              <div class="speed-bar-fill" id="speed-bar-fill" style="width:0%"></div>
+              <div class="speed-bar-limit" id="speed-bar-limit" style="left:50%"></div>
+            </div>
+          </div>
+          <div class="speed-limit-line" id="speed-limit-lbl">LIMITE: — km/h</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-top:4px" id="speed-radar-name">—</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Status dos Radares</span>
+          <a href="#" onclick="showPage('radares');return false" style="font-family:var(--mono);font-size:11px;color:var(--accent)">ver todos</a>
+        </div>
+        <div id="radar-mini-list" class="radar-list">
+          <div class="empty-state" style="padding:16px">
+            Nenhum radar configurado
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────── -->
+<!--  PAGE: RADARES                              -->
+<!-- ──────────────────────────────────────────── -->
+<div id="page-radares" class="page">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div>
+      <div style="font-family:var(--cond);font-size:22px;font-weight:700;color:var(--text)">Gerenciamento de Radares</div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--text-dim);margin-top:2px">Descoberta, configuração e monitoramento</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="configurarTodos()">⚡ Config em Massa</button>
+      <button class="btn btn-primary" onclick="abrirScan()">🔍 Escanear Rede</button>
+    </div>
+  </div>
+
+  <!-- SCAN PANEL -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-header">
+      <span class="panel-title">Descoberta de Radares</span>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-end">
+      <div class="form-group" style="flex:1;margin:0">
+        <label class="form-label">Rede CIDR para escanear</label>
+        <input class="form-input" id="scan-network" value="" placeholder="Ex: 192.168.1.0/24">
+      </div>
+      <button class="btn btn-primary" onclick="escanearRede()">Iniciar Scan</button>
+    </div>
+    <div class="scan-progress" id="scan-progress">
+      <div class="spinner"></div>
+      <span id="scan-status-text">Escaneando rede...</span>
+    </div>
+  </div>
+
+  <!-- LISTA DE RADARES -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Radares Conhecidos</span>
+      <span id="radar-count-badge" class="tag tag-blue">0 radares</span>
+    </div>
+    <div class="radar-list" id="radar-full-list">
+      <div class="empty-state">
+        <div class="empty-state-icon">📡</div>
+        Nenhum radar encontrado.<br>Use "Escanear Rede" para descobrir.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────── -->
+<!--  PAGE: EVENTOS                              -->
+<!-- ──────────────────────────────────────────── -->
+<div id="page-eventos" class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div>
+      <div style="font-family:var(--cond);font-size:22px;font-weight:700;color:var(--text)">Histórico de Eventos</div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--text-dim);margin-top:2px">Detecções em tempo real de todos os radares</div>
+    </div>
+    <button class="btn btn-outline" onclick="limparEventos()">🗑 Limpar</button>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Detecções Recentes</span>
+      <span id="eventos-count" class="tag tag-blue">0 eventos</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>HORA</th>
+            <th>RADAR</th>
+            <th>VELOCIDADE</th>
+            <th>LIMITE</th>
+            <th>STATUS</th>
+            <th>DIREÇÃO</th>
+          </tr>
+        </thead>
+        <tbody id="eventos-tbody">
+          <tr><td colspan="6" class="empty-state">Nenhum evento registrado</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────── -->
+<!--  PAGE: CONFIGURAÇÕES                        -->
+<!-- ──────────────────────────────────────────── -->
+<div id="page-configuracoes" class="page">
+  <div style="font-family:var(--cond);font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px">Configurações Globais</div>
+  <div style="font-family:var(--mono);font-size:12px;color:var(--text-dim);margin-bottom:20px">
+    Estas configurações são enviadas a todos os radares ao usar "Config em Massa"
+  </div>
+
+  <div class="grid-2">
+
+    <!-- PostgreSQL -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">🐘 PostgreSQL Central</span>
+        <div id="pg-test-badge" class="tag tag-yellow">NÃO TESTADO</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Host / IP</label>
+          <input class="form-input" id="cfg-pg-host" placeholder="192.168.1.100 ou servidor.db.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Porta</label>
+          <input class="form-input" id="cfg-pg-port" type="number" placeholder="5432">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nome do Banco</label>
+        <input class="form-input" id="cfg-pg-db" placeholder="radares_condominio">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Usuário</label>
+          <input class="form-input" id="cfg-pg-user" placeholder="postgres">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input class="form-input" id="cfg-pg-pass" type="password" placeholder="••••••••">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn btn-outline" onclick="testarPg()">🔌 Testar Conexão</button>
+      </div>
+    </div>
+
+    <!-- Radar Global -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">⚙️ Parâmetros dos Radares</span>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Limite de Velocidade (km/h)</label>
+          <input class="form-input" id="cfg-speed" type="number" step="0.5" placeholder="20">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Distância entre Sensores (m)</label>
+          <input class="form-input" id="cfg-dist" type="number" step="0.1" placeholder="1.0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">GPIO Sensor A (entrada)</label>
+          <input class="form-input" id="cfg-pin-a" type="number" placeholder="17">
+        </div>
+        <div class="form-group">
+          <label class="form-label">GPIO Sensor B (saída)</label>
+          <input class="form-input" id="cfg-pin-b" type="number" placeholder="27">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Intervalo de Sync (segundos)</label>
+          <input class="form-input" id="cfg-sync" type="number" placeholder="30">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Token API</label>
+          <input class="form-input" id="cfg-token" type="password" placeholder="token-secreto">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:12px;justify-content:flex-end">
+    <button class="btn btn-outline" onclick="carregarConfig()">↺ Recarregar</button>
+    <button class="btn btn-success" onclick="salvarConfig()">💾 Salvar Configurações</button>
+    <button class="btn btn-primary" onclick="configurarTodos()">⚡ Salvar e Enviar a Todos os Radares</button>
+  </div>
+</div>
+
+<!-- MODAL: CONFIGURAR RADAR INDIVIDUAL -->
+<div class="modal-overlay" id="modal-radar">
+  <div class="modal">
+    <div class="modal-title" id="modal-radar-title">Configurar Radar</div>
+    <div class="form-group">
+      <label class="form-label">Nome do Radar</label>
+      <input class="form-input" id="modal-radar-name" placeholder="Ex: Entrada Principal">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Localização</label>
+      <input class="form-input" id="modal-radar-location" placeholder="Ex: Rua das Flores, portão 1">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Limite de Velocidade (km/h)</label>
+      <input class="form-input" id="modal-radar-speed" type="number" step="0.5">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="enviarConfigRadar()">Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div id="toast-container"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ═══════════════════════════════════════════════════
+let currentPage = 'dashboard';
+let radares = [];
+let eventos = [];
+let eventosPorId = new Set();
+let modalRadarId = null;
+let limite_velocidade = 20;
+
+// ═══════════════════════════════════════════════════
+//  RELÓGIO
+// ═══════════════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('pt-BR', {hour12: false});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ═══════════════════════════════════════════════════
+//  NAVEGAÇÃO
+// ═══════════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.textContent.toLowerCase().includes(id.slice(0,4))) t.classList.add('active');
+  });
+  currentPage = id;
+}
+
+// ═══════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════
+function toast(msg, type = 'info', duration = 3000) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
+// ═══════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════
+async function carregarConfig() {
+  try {
+    const r = await fetch('/api/config');
+    const cfg = await r.json();
+    document.getElementById('cfg-pg-host').value = cfg.pg_host || '';
+    document.getElementById('cfg-pg-port').value = cfg.pg_port || 5432;
+    document.getElementById('cfg-pg-db').value = cfg.pg_db || '';
+    document.getElementById('cfg-pg-user').value = cfg.pg_user || '';
+    document.getElementById('cfg-speed').value = cfg.speed_limit || 20;
+    document.getElementById('cfg-dist').value = cfg.sensor_dist_m || 1.0;
+    document.getElementById('cfg-pin-a').value = cfg.sensor_a_pin || 17;
+    document.getElementById('cfg-pin-b').value = cfg.sensor_b_pin || 27;
+    document.getElementById('cfg-sync').value = cfg.sync_interval || 30;
+    document.getElementById('cfg-token').value = cfg.api_token || '';
+    limite_velocidade = cfg.speed_limit || 20;
+    atualizarLimitBar();
+  } catch(e) { toast('Erro ao carregar config', 'error'); }
+}
+
+async function salvarConfig() {
+  const payload = {
+    pg_host: document.getElementById('cfg-pg-host').value,
+    pg_port: parseInt(document.getElementById('cfg-pg-port').value),
+    pg_db: document.getElementById('cfg-pg-db').value,
+    pg_user: document.getElementById('cfg-pg-user').value,
+    speed_limit: parseFloat(document.getElementById('cfg-speed').value),
+    sensor_dist_m: parseFloat(document.getElementById('cfg-dist').value),
+    sensor_a_pin: parseInt(document.getElementById('cfg-pin-a').value),
+    sensor_b_pin: parseInt(document.getElementById('cfg-pin-b').value),
+    sync_interval: parseInt(document.getElementById('cfg-sync').value),
+    api_token: document.getElementById('cfg-token').value,
+  };
+  const senha = document.getElementById('cfg-pg-pass').value;
+  if (senha) payload.pg_pass = senha;
+
+  try {
+    await fetch('/api/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    limite_velocidade = payload.speed_limit;
+    atualizarLimitBar();
+    toast('Configurações salvas!', 'success');
+  } catch(e) { toast('Erro ao salvar config', 'error'); }
+}
+
+async function testarPg() {
+  await salvarConfig();
+  try {
+    const r = await fetch('/api/pg/status');
+    const d = await r.json();
+    const badge = document.getElementById('pg-test-badge');
+    if (d.conectado) {
+      badge.className = 'tag tag-green'; badge.textContent = 'CONECTADO';
+      toast('PostgreSQL conectado!', 'success');
+    } else {
+      badge.className = 'tag tag-red'; badge.textContent = 'FALHOU';
+      toast('Falha na conexão: ' + (d.motivo || ''), 'error', 5000);
+    }
+  } catch(e) { toast('Erro ao testar conexão', 'error'); }
+}
+
+async function configurarTodos() {
+  await salvarConfig();
+  toast('Enviando config para todos os radares...', 'info');
+  try {
+    const r = await fetch('/api/radares/configurar-todos', { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
+    const resultados = await r.json();
+    let ok = 0, fail = 0;
+    Object.values(resultados).forEach(v => v.status === 200 ? ok++ : fail++);
+    toast(`Config enviada: ${ok} ok, ${fail} falha(s)`, fail > 0 ? 'error' : 'success', 4000);
+    atualizarRadares();
+  } catch(e) { toast('Erro ao enviar config', 'error'); }
+}
+
+// ═══════════════════════════════════════════════════
+//  RADARES
+// ═══════════════════════════════════════════════════
+async function detectarRede() {
+  try {
+    const r = await fetch('/api/rede/detectar');
+    const d = await r.json();
+    document.getElementById('scan-network').value = d.rede || '';
+  } catch(e) {}
+}
+
+async function escanearRede() {
+  const rede = document.getElementById('scan-network').value;
+  if (!rede) { toast('Informe a rede CIDR', 'error'); return; }
+
+  const prog = document.getElementById('scan-progress');
+  prog.classList.add('active');
+  document.getElementById('scan-status-text').textContent = `Escaneando ${rede}...`;
+
+  try {
+    const r = await fetch('/api/rede/escanear', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({rede})
+    });
+    const d = await r.json();
+    prog.classList.remove('active');
+    toast(`Scan concluído: ${d.total} radar(es) encontrado(s)`, d.total > 0 ? 'success' : 'info', 4000);
+    atualizarRadares();
+  } catch(e) {
+    prog.classList.remove('active');
+    toast('Erro no scan: ' + e.message, 'error');
+  }
+}
+
+function abrirScan() { showPage('radares'); }
+
+async function atualizarRadares() {
+  try {
+    const r = await fetch('/api/radares');
+    radares = await r.json();
+
+    const onlineCount = radares.filter(r => r.online).length;
+    document.getElementById('radares-online-count').textContent = `${onlineCount}/${radares.length} RADARES`;
+
+    renderRadaresFull();
+    renderRadaresMini();
+    atualizarPgStatus();
+  } catch(e) {}
+}
+
+function renderRadaresFull() {
+  const cont = document.getElementById('radar-full-list');
+  const badge = document.getElementById('radar-count-badge');
+  badge.textContent = `${radares.length} radar(es)`;
+
+  if (!radares.length) {
+    cont.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📡</div>Nenhum radar encontrado.<br>Use "Escanear Rede" para descobrir.</div>`;
+    return;
+  }
+
+  cont.innerHTML = radares.map(r => {
+    const online = r.online;
+    const ultima = r.ultima_deteccao;
+    const vel = ultima?.velocidade;
+    const fast = vel > (r.limite_velocidade || limite_velocidade);
+    return `
+    <div class="radar-item ${online ? '' : 'offline'}">
+      <div class="radar-status-icon ${online ? 'online' : 'offline'}"></div>
+      <div class="radar-info">
+        <div class="radar-name">${r.radar_nome || r.radar_id}</div>
+        <div class="radar-meta">${r.ip || '—'} · ${r.localizacao || 'Sem localização'} · Pendentes: ${r.pendentes_sync ?? '—'}</div>
+      </div>
+      <div class="radar-speed">
+        ${online && vel != null ?
+          `<div class="radar-speed-val ${fast ? 'fast' : ''}">${vel.toFixed(1)}</div>
+           <div class="radar-speed-lbl">KM/H ÚLTIMA</div>` :
+          `<div class="radar-speed-lbl">${online ? 'AGUARDANDO' : 'OFFLINE'}</div>`
+        }
+      </div>
+      <div class="radar-actions">
+        <button class="btn btn-outline" onclick="abrirModalRadar('${r.radar_id}')">⚙</button>
+        <button class="btn btn-outline" onclick="reiniciarRadar('${r.radar_id}')">↺</button>
+        <button class="btn btn-danger" onclick="removerRadar('${r.radar_id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderRadaresMini() {
+  const cont = document.getElementById('radar-mini-list');
+  if (!radares.length) {
+    cont.innerHTML = `<div class="empty-state" style="padding:16px">Nenhum radar configurado</div>`;
+    return;
+  }
+  cont.innerHTML = radares.slice(0,5).map(r => {
+    const online = r.online;
+    return `
+    <div class="radar-item ${online ? '' : 'offline'}" style="padding:8px 12px">
+      <div class="radar-status-icon ${online ? 'online' : 'offline'}"></div>
+      <div class="radar-info">
+        <div class="radar-name" style="font-size:13px">${r.radar_nome || r.radar_id}</div>
+        <div class="radar-meta">${r.ip || '—'}</div>
+      </div>
+      <span class="tag ${online ? 'tag-green' : 'tag-red'}">${online ? 'ON' : 'OFF'}</span>
+    </div>`;
+  }).join('');
+}
+
+async function reiniciarRadar(id) {
+  try {
+    const r = await fetch(`/api/radares/${id}/reiniciar`, {method:'POST'});
+    const d = await r.json();
+    toast(d.mensagem || 'Reiniciando...', 'info');
+  } catch(e) { toast('Erro ao reiniciar', 'error'); }
+}
+
+async function removerRadar(id) {
+  if (!confirm('Remover este radar da lista?')) return;
+  await fetch(`/api/radares/${id}/remover`, {method:'DELETE'});
+  toast('Radar removido', 'info');
+  atualizarRadares();
+}
+
+function abrirModalRadar(id) {
+  modalRadarId = id;
+  const r = radares.find(x => x.radar_id === id);
+  if (r) {
+    document.getElementById('modal-radar-title').textContent = `Configurar: ${r.radar_nome || id}`;
+    document.getElementById('modal-radar-name').value = r.radar_nome || '';
+    document.getElementById('modal-radar-location').value = r.localizacao || '';
+    document.getElementById('modal-radar-speed').value = r.limite_velocidade || limite_velocidade;
+  }
+  document.getElementById('modal-radar').classList.add('active');
+}
+
+function fecharModal() {
+  document.getElementById('modal-radar').classList.remove('active');
+  modalRadarId = null;
+}
+
+async function enviarConfigRadar() {
+  if (!modalRadarId) return;
+  const payload = {
+    radar_name: document.getElementById('modal-radar-name').value,
+    radar_location: document.getElementById('modal-radar-location').value,
+    speed_limit: parseFloat(document.getElementById('modal-radar-speed').value),
+  };
+  try {
+    const r = await fetch(`/api/radares/${modalRadarId}/configurar`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (d.status === 'ok') {
+      toast('Configuração enviada!', 'success');
+      fecharModal();
+      atualizarRadares();
+    } else {
+      toast('Erro: ' + JSON.stringify(d), 'error');
+    }
+  } catch(e) { toast('Erro ao configurar', 'error'); }
+}
+
+// ═══════════════════════════════════════════════════
+//  EVENTOS / FEED EM TEMPO REAL
+// ═══════════════════════════════════════════════════
+function adicionarEvento(ev) {
+  if (eventosPorId.has(ev.uuid)) return;
+  eventosPorId.add(ev.uuid);
+  eventos.unshift(ev);
+  if (eventos.length > 200) eventos.pop();
+  renderEventFeed();
+  renderEventTable();
+  atualizarVelocimetro(ev);
+}
+
+function atualizarVelocimetro(ev) {
+  const vel = ev.velocidade || 0;
+  const lim = ev.limite || limite_velocidade;
+  const fast = vel > lim;
+  const pct = Math.min((vel / (lim * 2)) * 100, 100);
+  const limitPct = Math.min(50, 100);
+
+  const disp = document.getElementById('speed-display');
+  disp.textContent = vel.toFixed(1);
+  disp.className = 'speed-display' + (fast ? ' fast' : '');
+
+  document.getElementById('speed-bar-fill').style.width = pct + '%';
+  document.getElementById('speed-bar-fill').style.background = fast ? 'var(--red)' : 'var(--green)';
+  document.getElementById('speed-limit-lbl').textContent = `LIMITE: ${lim} km/h`;
+  document.getElementById('speed-radar-name').textContent = ev.radar_nome || ev.radar_id || '—';
+}
+
+function atualizarLimitBar() {
+  document.getElementById('speed-limit-lbl').textContent = `LIMITE: ${limite_velocidade} km/h`;
+}
+
+function renderEventFeed() {
+  const feed = document.getElementById('event-feed');
+  if (!eventos.length) {
+    feed.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📡</div>Aguardando detecções...</div>`;
+    return;
+  }
+  feed.innerHTML = eventos.slice(0,30).map(ev => {
+    const fast = ev.acima_limite || ev.velocidade > (ev.limite || limite_velocidade);
+    const hora = new Date(ev.timestamp).toLocaleTimeString('pt-BR');
+    return `
+    <div class="event-item ${fast ? 'infraction' : 'ok'}">
+      <span class="event-time">${hora}</span>
+      <span class="event-name">${ev.radar_nome || ev.radar_id || '—'}</span>
+      <span class="event-speed ${fast ? 'fast' : 'ok'}">${ev.velocidade?.toFixed(1)} km/h</span>
+      <span class="event-badge ${fast ? 'badge-infraction' : 'badge-ok'}">${fast ? 'INFRAÇÃO' : 'OK'}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderEventTable() {
+  const tbody = document.getElementById('eventos-tbody');
+  document.getElementById('eventos-count').textContent = `${eventos.length} eventos`;
+  if (!eventos.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum evento registrado</td></tr>';
+    return;
+  }
+  tbody.innerHTML = eventos.slice(0,100).map(ev => {
+    const fast = ev.acima_limite || ev.velocidade > (ev.limite || limite_velocidade);
+    const hora = new Date(ev.timestamp).toLocaleTimeString('pt-BR', {hour12:false});
+    return `
+    <tr>
+      <td>${hora}</td>
+      <td>${ev.radar_nome || ev.radar_id || '—'}</td>
+      <td style="font-size:16px;color:${fast ? 'var(--red)' : 'var(--green)'}">${ev.velocidade?.toFixed(2)} km/h</td>
+      <td>${ev.limite || limite_velocidade} km/h</td>
+      <td><span class="tag ${fast ? 'tag-red' : 'tag-green'}">${fast ? 'INFRAÇÃO' : 'OK'}</span></td>
+      <td>${ev.direcao || 'A→B'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function limparEventos() {
+  eventos = [];
+  eventosPorId = new Set();
+  renderEventFeed();
+  renderEventTable();
+}
+
+// ═══════════════════════════════════════════════════
+//  SERVER-SENT EVENTS (tempo real)
+// ═══════════════════════════════════════════════════
+function conectarSSE() {
+  const es = new EventSource('/api/stream');
+  es.onmessage = (e) => {
+    try {
+      const ev = JSON.parse(e.data);
+      adicionarEvento(ev);
+    } catch(err) {}
+  };
+  es.onerror = () => {
+    setTimeout(conectarSSE, 3000);
+    es.close();
+  };
+}
+
+// ═══════════════════════════════════════════════════
+//  MÉTRICAS DO POSTGRESQL
+// ═══════════════════════════════════════════════════
+async function atualizarPgStatus() {
+  try {
+    const r = await fetch('/api/pg/status');
+    const d = await r.json();
+    const dot = document.getElementById('pg-dot');
+    if (d.conectado) {
+      dot.classList.add('online'); dot.classList.remove('offline');
+    } else {
+      dot.classList.remove('online'); dot.classList.add('offline');
+    }
+  } catch(e) {}
+
+  try {
+    const r = await fetch('/api/pg/estatisticas');
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.erro) return;
+    const h = d.hoje || {};
+    document.getElementById('m-total').textContent = h.total ?? '—';
+    document.getElementById('m-infracoes').textContent = h.infrações ?? '—';
+    document.getElementById('m-media').innerHTML = h.media_velocidade
+      ? `${parseFloat(h.media_velocidade).toFixed(1)}<span class="unit">km/h</span>` : '—';
+    document.getElementById('m-maxima').innerHTML = h.max_velocidade
+      ? `${parseFloat(h.max_velocidade).toFixed(1)}<span class="unit">km/h</span>` : '—';
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════
+//  POLLING RADARES
+// ═══════════════════════════════════════════════════
+async function pollEventos() {
+  try {
+    const r = await fetch('/api/eventos');
+    const evts = await r.json();
+    evts.forEach(adicionarEvento);
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+(async function init() {
+  await carregarConfig();
+  await detectarRede();
+  await atualizarRadares();
+  await pollEventos();
+  await atualizarPgStatus();
+
+  conectarSSE();
+
+  // Atualiza radares a cada 8s
+  setInterval(atualizarRadares, 8000);
+  // Atualiza stats PG a cada 30s
+  setInterval(atualizarPgStatus, 30000);
+  // Poll eventos a cada 3s (fallback se SSE falhar)
+  setInterval(pollEventos, 3000);
+})();
+</script>
+</body>
+</html>

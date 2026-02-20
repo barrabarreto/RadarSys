@@ -53,7 +53,7 @@ GND      ──────► GND (ambos)
 3. **Acesse via SSH** e execute:
 
 ```bash
-git clone <seu-repo> radar
+git clone https://github.com/barrabarreto/RadarSys.git radar
 cd radar/raspberry
 sudo bash setup.sh
 ```

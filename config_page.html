@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Radar Config</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #f5f2ed;
+    --bg2:      #ede9e2;
+    --surface:  #ffffff;
+    --border:   #ddd8cf;
+    --border2:  #c8c2b6;
+    --ink:      #1a1714;
+    --ink2:     #6b6560;
+    --ink3:     #9e9890;
+    --accent:   #e85d26;
+    --accent2:  #c44e1e;
+    --green:    #2d8a4e;
+    --green-bg: #edf7f1;
+    --red:      #c0392b;
+    --red-bg:   #fdf0ee;
+    --yellow:   #b7860b;
+    --yellow-bg:#fdf8ec;
+    --mono:     'DM Mono', monospace;
+    --sans:     'Syne', sans-serif;
+    --radius:   6px;
+    --shadow:   0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  /* ── NOISE TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    opacity: .025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--ink);
+    color: white;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 58px;
+    position: sticky; top: 0; z-index: 100;
+  }
+
+  .logo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 28px; height: 28px;
+    position: relative;
+  }
+  .logo-icon svg { width: 28px; height: 28px; }
+
+  .logo-name {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 17px;
+    letter-spacing: .5px;
+    color: white;
+  }
+  .logo-id {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: rgba(255,255,255,.4);
+    letter-spacing: 1px;
+  }
+
+  .header-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: rgba(255,255,255,.5);
+  }
+  .pulse {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 0 0 rgba(74,222,128,.4);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(74,222,128,.4); }
+    70%  { box-shadow: 0 0 0 6px rgba(74,222,128,0); }
+    100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+  }
+
+  /* ── MAIN ── */
+  main {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    position: relative; z-index: 1;
+  }
+
+  /* ── ALERT BANNERS ── */
+  .alert {
+    display: none;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    font-family: var(--mono);
+    font-size: 12px;
+    margin-bottom: 16px;
+    border: 1px solid;
+  }
+  .alert.show { display: flex; align-items: flex-start; gap: 8px; }
+  .alert-success { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+  .alert-error   { background: var(--red-bg);   border-color: var(--red);   color: var(--red); }
+  .alert-warn    { background: var(--yellow-bg); border-color: var(--yellow); color: var(--yellow); }
+
+  /* ── SECTION ── */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+    overflow: hidden;
+    animation: fadeUp .3s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .section:nth-child(2) { animation-delay: .05s; }
+  .section:nth-child(3) { animation-delay: .1s; }
+  .section:nth-child(4) { animation-delay: .15s; }
+  .section:nth-child(5) { animation-delay: .2s; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .section-header:active { background: var(--border); }
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: .3px;
+    color: var(--ink);
+  }
+  .section-icon {
+    width: 22px; height: 22px;
+    background: var(--accent);
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .section-icon.green { background: var(--green); }
+  .section-icon.blue  { background: #2563eb; }
+  .section-icon.purple{ background: #7c3aed; }
+
+  .chevron {
+    font-size: 11px;
+    color: var(--ink3);
+    transition: transform .2s;
+  }
+  .section.collapsed .chevron { transform: rotate(-90deg); }
+
+  .section-body {
+    padding: 16px;
+    transition: max-height .3s ease, opacity .2s;
+  }
+  .section.collapsed .section-body {
+    display: none;
+  }
+
+  /* ── FORM ── */
+  .form-group { margin-bottom: 14px; }
+  .form-group:last-child { margin-bottom: 0; }
+
+  .form-label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--ink2);
+    margin-bottom: 5px;
+  }
+  .form-hint {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink3);
+    margin-top: 3px;
+  }
+
+  .form-input, .form-select {
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 14px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    -webkit-appearance: none;
+  }
+  .form-input:focus, .form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(232,93,38,.12);
+  }
+  .form-input.valid   { border-color: var(--green); }
+  .form-input.invalid { border-color: var(--red); }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .input-group {
+    position: relative;
+  }
+  .input-suffix {
+    position: absolute;
+    right: 10px; top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink3);
+    pointer-events: none;
+  }
+  .input-group .form-input { padding-right: 40px; }
+
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+  }
+  .toggle-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink);
+  }
+  .toggle-sub {
+    font-size: 10px;
+    color: var(--ink3);
+    margin-top: 2px;
+  }
+  .toggle {
+    width: 42px; height: 24px;
+    background: var(--border2);
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background .2s;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    background: white;
+    border-radius: 50%;
+    top: 3px; left: 3px;
+    transition: left .2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  }
+  .toggle.on::after { left: 21px; }
+
+  /* ── WIFI SCAN ── */
+  .wifi-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .wifi-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .wifi-item:active { border-color: var(--accent); }
+  .wifi-item.selected { border-color: var(--accent); background: rgba(232,93,38,.04); }
+  .wifi-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .wifi-signal {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 14px;
+  }
+  .wifi-bar {
+    width: 3px;
+    background: var(--border2);
+    border-radius: 1px;
+  }
+  .wifi-bar.active { background: var(--accent); }
+  .wifi-bar:nth-child(1) { height: 4px; }
+  .wifi-bar:nth-child(2) { height: 7px; }
+  .wifi-bar:nth-child(3) { height: 10px; }
+  .wifi-bar:nth-child(4) { height: 14px; }
+
+  /* ── BOTÕES ── */
+  .btn {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 11px 18px;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    transition: all .15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+    letter-spacing: .2px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    width: 100%;
+    padding: 14px;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(232,93,38,.3);
+  }
+  .btn-primary:active { background: var(--accent2); transform: scale(.99); }
+  .btn-outline {
+    background: transparent;
+    color: var(--ink2);
+    border: 1.5px solid var(--border2);
+    font-size: 12px;
+    padding: 8px 14px;
+  }
+  .btn-outline:active { border-color: var(--accent); color: var(--accent); }
+  .btn-danger {
+    background: var(--red-bg);
+    color: var(--red);
+    border: 1.5px solid rgba(192,57,43,.2);
+    font-size: 12px;
+    padding: 8px 14px;
+  }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .btn-row .btn { flex: 1; }
+
+  /* ── STATUS CHIPS ── */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: .5px;
+  }
+  .chip-green  { background: var(--green-bg); color: var(--green); }
+  .chip-red    { background: var(--red-bg);   color: var(--red); }
+  .chip-yellow { background: var(--yellow-bg);color: var(--yellow); }
+  .chip-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  /* ── INFO GRID ── */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .info-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+  }
+  .info-item-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--ink3);
+    margin-bottom: 4px;
+  }
+  .info-item-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink);
+    word-break: break-all;
+  }
+
+  /* ── LOADING ── */
+  .spinner-sm {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── SAVE FAB ── */
+  #fab-save {
+    position: fixed;
+    bottom: 20px; right: 20px;
+    background: var(--ink);
+    color: white;
+    border: none;
+    border-radius: 28px;
+    padding: 14px 22px;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,0,0,.25);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 200;
+    transition: transform .15s, box-shadow .15s;
+    transform: translateY(80px);
+    opacity: 0;
+  }
+  #fab-save.visible {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  #fab-save:active { transform: scale(.97); }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 12px 0;
+  }
+
+  /* ── BT SECTION ── */
+  .bt-coming {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    text-align: center;
+    gap: 8px;
+  }
+  .bt-icon {
+    font-size: 36px;
+    opacity: .3;
+  }
+  .bt-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink2);
+  }
+  .bt-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink3);
+    max-width: 280px;
+    line-height: 1.5;
+  }
+  .bt-badge {
+    background: var(--yellow-bg);
+    color: var(--yellow);
+    border: 1px solid rgba(183,134,11,.2);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+  }
+
+  @media (max-width: 400px) {
+    .form-row { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon">
+      <svg viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="12" stroke="rgba(255,255,255,.2)" stroke-width="1.5"/>
+        <circle cx="14" cy="14" r="7"  stroke="rgba(255,255,255,.4)" stroke-width="1.5"/>
+        <circle cx="14" cy="14" r="3"  fill="white"/>
+        <line x1="14" y1="2"  x2="14" y2="6"  stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="14" y1="22" x2="14" y2="26" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="2"  y1="14" x2="6"  y2="14" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="22" y1="14" x2="26" y2="14" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-name">Radar Config</div>
+      <div class="logo-id" id="header-radar-id">carregando...</div>
+    </div>
+  </div>
+  <div class="header-badge">
+    <div class="pulse"></div>
+    <span id="header-status">online</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ALERTAS -->
+  <div id="alert-success" class="alert alert-success">
+    <span>✓</span><span id="alert-success-msg">Salvo com sucesso!</span>
+  </div>
+  <div id="alert-error" class="alert alert-error">
+    <span>✗</span><span id="alert-error-msg">Erro ao salvar.</span>
+  </div>
+
+  <!-- ─── SEÇÃO: INFORMAÇÕES DO DISPOSITIVO ─── -->
+  <div class="section" id="sec-info">
+    <div class="section-header" onclick="toggleSection('sec-info')">
+      <div class="section-title">
+        <div class="section-icon blue">ℹ</div>
+        Dispositivo
+      </div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div class="info-grid" id="device-info-grid">
+        <div class="info-item">
+          <div class="info-item-label">Radar ID</div>
+          <div class="info-item-value" id="info-radar-id">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-label">Hostname</div>
+          <div class="info-item-value" id="info-hostname">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-label">IP Wi-Fi</div>
+          <div class="info-item-value" id="info-ip-wifi">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-label">IP Ethernet</div>
+          <div class="info-item-value" id="info-ip-eth">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-label">PostgreSQL</div>
+          <div class="info-item-value" id="info-pg-status">—</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-label">Pendentes Sync</div>
+          <div class="info-item-value" id="info-pendentes">—</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="reiniciarServico()">↺ Reiniciar Serviço</button>
+        <button class="btn btn-danger" onclick="resetFactory()">⚠ Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SEÇÃO: IDENTIFICAÇÃO ─── -->
+  <div class="section" id="sec-id">
+    <div class="section-header" onclick="toggleSection('sec-id')">
+      <div class="section-title">
+        <div class="section-icon">🏷</div>
+        Identificação
+      </div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div class="form-group">
+        <label class="form-label">Nome do Radar</label>
+        <input class="form-input" id="cfg-name" placeholder="Ex: Entrada Principal" oninput="markDirty()">
+        <div class="form-hint">Aparece no dashboard e relatórios</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Localização</label>
+        <input class="form-input" id="cfg-location" placeholder="Ex: Portão 1 — Rua das Flores" oninput="markDirty()">
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SEÇÃO: SENSORES ─── -->
+  <div class="section" id="sec-sensor">
+    <div class="section-header" onclick="toggleSection('sec-sensor')">
+      <div class="section-title">
+        <div class="section-icon">⚡</div>
+        Sensores IR & Velocidade
+      </div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">GPIO Sensor A</label>
+          <div class="input-group">
+            <input class="form-input" id="cfg-pin-a" type="number" min="1" max="40" placeholder="17" oninput="markDirty()">
+            <span class="input-suffix">GPIO</span>
+          </div>
+          <div class="form-hint">Sensor de entrada</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">GPIO Sensor B</label>
+          <div class="input-group">
+            <input class="form-input" id="cfg-pin-b" type="number" min="1" max="40" placeholder="27" oninput="markDirty()">
+            <span class="input-suffix">GPIO</span>
+          </div>
+          <div class="form-hint">Sensor de saída</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Distância entre sensores</label>
+          <div class="input-group">
+            <input class="form-input" id="cfg-dist" type="number" step="0.05" min="0.1" placeholder="1.0" oninput="markDirty()">
+            <span class="input-suffix">m</span>
+          </div>
+          <div class="form-hint">Meça com precisão!</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Limite de Velocidade</label>
+          <div class="input-group">
+            <input class="form-input" id="cfg-speed" type="number" step="0.5" min="1" placeholder="20" oninput="markDirty()">
+            <span class="input-suffix">km/h</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SEÇÃO: POSTGRESQL ─── -->
+  <div class="section" id="sec-pg">
+    <div class="section-header" onclick="toggleSection('sec-pg')">
+      <div class="section-title">
+        <div class="section-icon green">🐘</div>
+        Banco de Dados Central
+      </div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Host / IP</label>
+          <input class="form-input" id="cfg-pg-host" placeholder="192.168.1.100" oninput="markDirty()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Porta</label>
+          <input class="form-input" id="cfg-pg-port" type="number" placeholder="5432" oninput="markDirty()">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nome do Banco</label>
+        <input class="form-input" id="cfg-pg-db" placeholder="radares" oninput="markDirty()">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Usuário</label>
+          <input class="form-input" id="cfg-pg-user" placeholder="postgres" oninput="markDirty()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input class="form-input" id="cfg-pg-pass" type="password" placeholder="••••••" oninput="markDirty()">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Intervalo de sincronização</label>
+        <div class="input-group">
+          <input class="form-input" id="cfg-sync" type="number" min="5" placeholder="30" oninput="markDirty()">
+          <span class="input-suffix">seg</span>
+        </div>
+      </div>
+      <button class="btn btn-outline" onclick="testarPg()" style="width:100%">🔌 Testar Conexão</button>
+    </div>
+  </div>
+
+  <!-- ─── SEÇÃO: WI-FI ─── -->
+  <div class="section" id="sec-wifi">
+    <div class="section-header" onclick="toggleSection('sec-wifi')">
+      <div class="section-title">
+        <div class="section-icon purple">📶</div>
+        Wi-Fi
+      </div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <button class="btn btn-outline" onclick="escanearWifi()" style="width:100%;margin-bottom:12px" id="btn-scan-wifi">
+        🔍 Escanear Redes
+      </button>
+      <div id="wifi-list" class="wifi-list"></div>
+      <div class="form-group">
+        <label class="form-label">SSID (nome da rede)</label>
+        <input class="form-input" id="cfg-wifi-ssid" placeholder="Nome_do_WiFi" oninput="markDirty()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <input class="form-input" id="cfg-wifi-pass" type="password" placeholder="Senha da rede" oninput="markDirty()">
+      </div>
+      <div class="toggle-wrap">
+        <div>
+          <div class="toggle-label">Conectar automaticamente</div>
+          <div class="toggle-sub">Reconecta ao reiniciar</div>
+        </div>
+        <div class="toggle on" id="toggle-autoconnect" onclick="toggleAutoconnect()"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SEÇÃO: SEGURANÇA ─── -->
+  <div class="section" id="sec-security">
+    <div class="section-header" onclick="toggleSection('sec-security')">
+      <div class="section-title">
+        <div class="section-icon" style="background:#64748b">🔐</div>
+        Segurança
+      </div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div class="form-group">
+        <label class="form-label">Token de API</label>
+        <input class="form-input" id="cfg-token" type="password" placeholder="token-secreto" oninput="markDirty()">
+        <div class="form-hint">Deve ser igual no Manager Windows</div>
+      </div>
+      <button class="btn btn-outline" onclick="gerarToken()" style="width:100%">🎲 Gerar Token Aleatório</button>
+    </div>
+  </div>
+
+  <!-- ─── SEÇÃO: BLUETOOTH (FUTURO) ─── -->
+  <div class="section" id="sec-bt">
+    <div class="section-header" onclick="toggleSection('sec-bt')">
+      <div class="section-title">
+        <div class="section-icon" style="background:#1d4ed8">📱</div>
+        App Bluetooth
+      </div>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="section-body">
+      <div class="bt-coming">
+        <div class="bt-icon">📡</div>
+        <div class="bt-title">Configuração via Bluetooth BLE</div>
+        <div class="bt-sub">
+          Futuramente você poderá configurar o radar diretamente pelo app mobile via Bluetooth Low Energy, sem precisar se conectar no Wi-Fi do Pi.
+        </div>
+        <div class="bt-badge">EM DESENVOLVIMENTO</div>
+      </div>
+      <div class="divider"></div>
+      <div class="form-group">
+        <label class="form-label">Nome BLE do dispositivo</label>
+        <input class="form-input" id="cfg-ble-name" placeholder="Radar-Entrada" oninput="markDirty()">
+        <div class="form-hint">Como aparecerá no app ao fazer scan Bluetooth</div>
+      </div>
+      <div class="toggle-wrap">
+        <div>
+          <div class="toggle-label">Ativar BLE (experimental)</div>
+          <div class="toggle-sub">Requer Pi Zero 2W ou adaptador BT</div>
+        </div>
+        <div class="toggle" id="toggle-ble" onclick="toggleBle()"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTÃO SALVAR PRINCIPAL -->
+  <button class="btn btn-primary" onclick="salvarTudo()" id="btn-salvar">
+    💾 Salvar Configurações
+  </button>
+
+</main>
+
+<!-- FAB SALVAR (aparece quando há mudanças) -->
+<button id="fab-save" onclick="salvarTudo()">
+  💾 Salvar alterações
+</button>
+
+<script>
+// ════════════════════════════════════════════
+//  ESTADO
+// ════════════════════════════════════════════
+let dirty = false;
+let autoconnect = true;
+let bleEnabled = false;
+let wifiSelecionado = null;
+
+// ════════════════════════════════════════════
+//  ACCORDION
+// ════════════════════════════════════════════
+function toggleSection(id) {
+  document.getElementById(id).classList.toggle('collapsed');
+}
+
+// ════════════════════════════════════════════
+//  DIRTY FLAG (mudanças não salvas)
+// ════════════════════════════════════════════
+function markDirty() {
+  dirty = true;
+  document.getElementById('fab-save').classList.add('visible');
+}
+
+// ════════════════════════════════════════════
+//  TOGGLES
+// ════════════════════════════════════════════
+function toggleAutoconnect() {
+  autoconnect = !autoconnect;
+  const el = document.getElementById('toggle-autoconnect');
+  el.classList.toggle('on', autoconnect);
+  markDirty();
+}
+
+function toggleBle() {
+  bleEnabled = !bleEnabled;
+  const el = document.getElementById('toggle-ble');
+  el.classList.toggle('on', bleEnabled);
+  markDirty();
+}
+
+// ════════════════════════════════════════════
+//  CARREGAR STATUS E CONFIG DO PI
+// ════════════════════════════════════════════
+async function carregarStatus() {
+  try {
+    const r = await fetch('/api/status', {
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+    if (!r.ok) return;
+    const d = await r.json();
+
+    document.getElementById('header-radar-id').textContent = 'ID: ' + (d.radar_id || '—');
+    document.getElementById('info-radar-id').textContent   = d.radar_id || '—';
+    document.getElementById('info-hostname').textContent   = d.radar_nome || '—';
+    document.getElementById('info-pendentes').textContent  = d.pendentes_sync ?? '—';
+
+    const pgEl = document.getElementById('info-pg-status');
+    if (d.postgresql_conectado) {
+      pgEl.innerHTML = '<span class="chip chip-green"><span class="chip-dot"></span>Conectado</span>';
+    } else {
+      pgEl.innerHTML = '<span class="chip chip-red"><span class="chip-dot"></span>Desconectado</span>';
+    }
+  } catch(e) {}
+
+  // IPs da rede
+  try {
+    const r = await fetch('/api/network-info');
+    if (r.ok) {
+      const d = await r.json();
+      document.getElementById('info-ip-wifi').textContent = d.wifi || '—';
+      document.getElementById('info-ip-eth').textContent  = d.eth  || '—';
+    }
+  } catch(e) {}
+}
+
+async function carregarConfig() {
+  try {
+    const r = await fetch('/api/config-local');
+    if (!r.ok) return;
+    const d = await r.json();
+
+    document.getElementById('cfg-name').value     = d.RADAR_NAME || '';
+    document.getElementById('cfg-location').value = d.RADAR_LOCATION || '';
+    document.getElementById('cfg-pin-a').value    = d.SENSOR_A_PIN || 17;
+    document.getElementById('cfg-pin-b').value    = d.SENSOR_B_PIN || 27;
+    document.getElementById('cfg-dist').value     = d.SENSOR_DIST_M || 1.0;
+    document.getElementById('cfg-speed').value    = d.SPEED_LIMIT || 20;
+    document.getElementById('cfg-pg-host').value  = d.PG_HOST || '';
+    document.getElementById('cfg-pg-port').value  = d.PG_PORT || 5432;
+    document.getElementById('cfg-pg-db').value    = d.PG_DB || '';
+    document.getElementById('cfg-pg-user').value  = d.PG_USER || '';
+    document.getElementById('cfg-sync').value     = d.SYNC_INTERVAL || 30;
+    document.getElementById('cfg-token').value    = d.API_TOKEN || '';
+    document.getElementById('cfg-ble-name').value = d.BLE_NAME || '';
+    bleEnabled = d.BLE_ENABLED === '1';
+    document.getElementById('toggle-ble').classList.toggle('on', bleEnabled);
+  } catch(e) {}
+}
+
+function getToken() {
+  return document.getElementById('cfg-token').value || 'mude-este-token';
+}
+
+// ════════════════════════════════════════════
+//  WI-FI
+// ════════════════════════════════════════════
+async function escanearWifi() {
+  const btn = document.getElementById('btn-scan-wifi');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner-sm" style="border-top-color:var(--accent);border-color:var(--border2)"></div> Escaneando...';
+
+  try {
+    const r = await fetch('/api/wifi/scan', {
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+    const redes = await r.json();
+    renderWifiList(redes);
+  } catch(e) {
+    // Mock para demo/teste
+    renderWifiList([
+      { ssid: 'Condominio_WiFi', signal: 4 },
+      { ssid: 'Rede_Sindico',   signal: 3 },
+      { ssid: 'AP_Portaria',    signal: 2 },
+    ]);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '🔍 Escanear Redes';
+}
+
+function renderWifiList(redes) {
+  const cont = document.getElementById('wifi-list');
+  if (!redes.length) {
+    cont.innerHTML = '<div style="font-family:var(--mono);font-size:12px;color:var(--ink3);text-align:center;padding:8px">Nenhuma rede encontrada</div>';
+    return;
+  }
+  cont.innerHTML = redes.map(r => `
+    <div class="wifi-item" onclick="selecionarWifi('${r.ssid}', this)">
+      <span class="wifi-name">${r.ssid}</span>
+      <div class="wifi-signal">
+        ${[1,2,3,4].map(i => `<div class="wifi-bar ${i <= r.signal ? 'active' : ''}"></div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function selecionarWifi(ssid, el) {
+  document.querySelectorAll('.wifi-item').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('cfg-wifi-ssid').value = ssid;
+  markDirty();
+}
+
+// ════════════════════════════════════════════
+//  TESTAR POSTGRESQL
+// ════════════════════════════════════════════
+async function testarPg() {
+  const payload = {
+    pg_host: document.getElementById('cfg-pg-host').value,
+    pg_port: parseInt(document.getElementById('cfg-pg-port').value) || 5432,
+    pg_db:   document.getElementById('cfg-pg-db').value,
+    pg_user: document.getElementById('cfg-pg-user').value,
+    pg_pass: document.getElementById('cfg-pg-pass').value,
+  };
+
+  try {
+    const r = await fetch('/api/pg/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showAlert('success', '✓ PostgreSQL conectado com sucesso!');
+    } else {
+      showAlert('error', 'Falha: ' + (d.erro || 'verifique os dados'));
+    }
+  } catch(e) {
+    showAlert('error', 'Erro ao testar: ' + e.message);
+  }
+}
+
+// ════════════════════════════════════════════
+//  GERAR TOKEN
+// ════════════════════════════════════════════
+function gerarToken() {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(24)))
+    .map(b => chars[b % chars.length]).join('');
+  document.getElementById('cfg-token').value = token;
+  document.getElementById('cfg-token').type = 'text';
+  setTimeout(() => document.getElementById('cfg-token').type = 'password', 3000);
+  markDirty();
+  showAlert('success', 'Token gerado! Anote e configure o mesmo no Manager Windows.');
+}
+
+// ════════════════════════════════════════════
+//  SALVAR
+// ════════════════════════════════════════════
+async function salvarTudo() {
+  const btn = document.getElementById('btn-salvar');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner-sm"></div> Salvando...';
+
+  const payload = {
+    radar_name:     document.getElementById('cfg-name').value,
+    radar_location: document.getElementById('cfg-location').value,
+    sensor_a_pin:   parseInt(document.getElementById('cfg-pin-a').value) || 17,
+    sensor_b_pin:   parseInt(document.getElementById('cfg-pin-b').value) || 27,
+    sensor_dist_m:  parseFloat(document.getElementById('cfg-dist').value) || 1.0,
+    speed_limit:    parseFloat(document.getElementById('cfg-speed').value) || 20,
+    pg_host:        document.getElementById('cfg-pg-host').value,
+    pg_port:        parseInt(document.getElementById('cfg-pg-port').value) || 5432,
+    pg_db:          document.getElementById('cfg-pg-db').value,
+    pg_user:        document.getElementById('cfg-pg-user').value,
+    sync_interval:  parseInt(document.getElementById('cfg-sync').value) || 30,
+    api_token:      document.getElementById('cfg-token').value,
+    wifi_ssid:      document.getElementById('cfg-wifi-ssid').value,
+    ble_name:       document.getElementById('cfg-ble-name').value,
+    ble_enabled:    bleEnabled ? '1' : '0',
+  };
+
+  const pgPass = document.getElementById('cfg-pg-pass').value;
+  if (pgPass) payload.pg_pass = pgPass;
+
+  const wifiPass = document.getElementById('cfg-wifi-pass').value;
+  if (wifiPass) payload.wifi_pass = wifiPass;
+
+  try {
+    const r = await fetch('/api/configurar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+
+    if (d.status === 'ok') {
+      showAlert('success', '✓ Configurações salvas! Reiniciando serviço...');
+      dirty = false;
+      document.getElementById('fab-save').classList.remove('visible');
+    } else {
+      showAlert('error', 'Erro: ' + JSON.stringify(d));
+    }
+  } catch(e) {
+    showAlert('error', 'Erro ao salvar: ' + e.message);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '💾 Salvar Configurações';
+}
+
+// ════════════════════════════════════════════
+//  AÇÕES DO SISTEMA
+// ════════════════════════════════════════════
+async function reiniciarServico() {
+  if (!confirm('Reiniciar o serviço do radar?')) return;
+  try {
+    await fetch('/api/reiniciar', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+    showAlert('success', '↺ Reiniciando serviço...');
+  } catch(e) {
+    showAlert('error', 'Erro: ' + e.message);
+  }
+}
+
+async function resetFactory() {
+  if (!confirm('⚠ ATENÇÃO: Isso vai apagar TODAS as configurações e restaurar os padrões de fábrica. Continuar?')) return;
+  try {
+    await fetch('/api/reset-factory', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+    showAlert('success', 'Reset realizado. Recarregando...');
+    setTimeout(() => location.reload(), 2000);
+  } catch(e) {
+    showAlert('error', 'Erro: ' + e.message);
+  }
+}
+
+// ════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════
+function showAlert(type, msg) {
+  ['success','error'].forEach(t => {
+    document.getElementById('alert-' + t).classList.remove('show');
+  });
+  document.getElementById('alert-' + type + '-msg').textContent = msg;
+  document.getElementById('alert-' + type).classList.add('show');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => document.getElementById('alert-' + type).classList.remove('show'), 5000);
+}
+
+// Avisa antes de sair com mudanças não salvas
+window.addEventListener('beforeunload', (e) => {
+  if (dirty) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+// ════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════
+(async function init() {
+  await carregarConfig();
+  await carregarStatus();
+  // Atualiza status a cada 15s
+  setInterval(carregarStatus, 15000);
+})();
+</script>
+</body>
+</html>
